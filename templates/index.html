@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Espaço Isa | Clínica de Desenvolvimento Infantil</title>
+    <link rel="icon" type="image/jpeg" href="/static/img/logo.jpg?v=9">
+    <link rel="stylesheet" href="/static/css/style.css?v=10">
+</head>
+<body>
+    <!-- TELA DE LOGIN -->
+    <div id="login-screen" class="login-screen">
+        <div class="login-card">
+            <div class="login-brand" style="flex-direction:column; text-align:center; gap:0.6rem;">
+                <img src="/static/img/logo.jpg?v=5" alt="Logo Espaço Isa" style="width:150px; height:150px; object-fit:contain; border-radius:16px; box-shadow:0 4px 14px rgba(0,0,0,0.08); background:#ffffff; padding:6px;">
+                <div>
+                    <h2 style="font-size:1.5rem; color:#0f172a; font-weight:800;">Espaço Isa</h2>
+                    <span style="font-size:0.85rem; color:#64748b;">Clínica de Desenvolvimento Infantil • Acesso Restrito</span>
+                </div>
+            </div>
+
+            <form id="form-login" onsubmit="event.preventDefault(); App.fazerLogin();">
+                <div class="form-group">
+                    <label for="login-email">E-mail de Acesso</label>
+                    <input type="email" id="login-email" class="form-control" placeholder="exemplo@clinica.psi.br" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-senha">Senha</label>
+                    <input type="password" id="login-senha" class="form-control" placeholder="Digite sua senha (padrão: 123456)" required>
+                </div>
+                <div id="login-erro" style="display:none; background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; padding:0.65rem; border-radius:8px; font-size:0.84rem; margin-bottom:1rem;"></div>
+                <button type="submit" class="btn btn-primary" style="width:100%; padding:0.75rem; font-size:0.95rem;">
+                    Entrar no Sistema
+                </button>
+            </form>
+
+            <div class="login-quick-list">
+                <span style="display:block; font-size:0.76rem; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">
+                    Acesso Rápido (Clique para preencher • Senha padrão: 123456):
+                </span>
+                <div id="login-quick-accounts"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-layout" id="app-main-layout" style="display:none;">
+        <!-- Barra Superior Mobile / Tablet -->
+        <header class="mobile-topbar no-print">
+            <div style="display:flex; align-items:center; gap:0.65rem;">
+                <img src="/static/img/logo.jpg?v=5" alt="Logo Espaço Isa" style="width:40px; height:40px; object-fit:contain; border-radius:10px; background:#ffffff; padding:2px;">
+                <div>
+                    <strong style="display:block; font-size:0.98rem; color:#ffffff; line-height:1.2;">Espaço Isa</strong>
+                    <span style="font-size:0.72rem; color:#94a3b8;">Desenvolvimento Infantil</span>
+                </div>
+            </div>
+            <button type="button" class="mobile-menu-btn" onclick="App.toggleMobileSidebar()">
+                ☰ Menu
+            </button>
+        </header>
+
+        <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="App.closeMobileSidebar()"></div>
+
+        <!-- Menu Lateral -->
+        <aside class="sidebar" id="app-sidebar">
+            <div class="brand">
+                <img src="/static/img/logo.jpg?v=5" alt="Logo Espaço Isa" style="width:56px; height:56px; object-fit:contain; border-radius:12px; background:#ffffff; padding:3px; flex-shrink:0;">
+                <div style="flex:1;">
+                    <h1>Espaço Isa</h1>
+                    <span>Desenvolvimento Infantil</span>
+                </div>
+                <button type="button" class="sidebar-close-btn" onclick="App.closeMobileSidebar()">✕</button>
+            </div>
+
+            <nav class="nav-menu">
+                <button class="nav-btn active" data-view="dashboard" data-admin-only="true" onclick="App.navigate('dashboard')">
+                    <span>📊</span> Visão Geral (Hoje)
+                </button>
+                <button class="nav-btn" data-view="agenda" onclick="App.navigate('agenda')">
+                    <span>📅</span> Agenda & Sessões
+                </button>
+                <button class="nav-btn" data-view="pacientes" data-admin-only="true" onclick="App.navigate('pacientes')">
+                    <span>👥</span> Pacientes
+                </button>
+                <button class="nav-btn" data-view="prontuario" onclick="App.navigate('prontuario')">
+                    <span>🔒</span> Prontuário & Anamnese
+                    <span class="badge-sigilo">Sigilo</span>
+                </button>
+                <button class="nav-btn" data-view="financeiro" data-admin-only="true" onclick="App.navigate('financeiro')">
+                    <span>💰</span> Financeiro & Recibos
+                </button>
+                <button class="nav-btn" data-view="despesas" data-admin-only="true" onclick="App.navigate('despesas')">
+                    <span>🏢</span> Despesas do Consultório
+                </button>
+                <button class="nav-btn" data-view="psicologos" data-admin-only="true" onclick="App.navigate('psicologos')">
+                    <span>🩺</span> Psicólogos & Equipe
+                </button>
+            </nav>
+
+            <!-- Informações do Usuário Logado e Logout -->
+            <div class="user-switcher">
+                <label>Usuário Autenticado:</label>
+                <div id="logged-user-name" style="font-weight:700; font-size:0.92rem; color:#ffffff; margin-top:0.2rem;"></div>
+                <div id="logged-user-email" style="font-size:0.76rem; color:#94a3b8;"></div>
+                <div class="user-role-pill" id="current-user-role" style="margin-bottom:0.85rem;"></div>
+                <button class="btn btn-sm btn-secondary" style="width:100%; background:#1e293b; color:#f8fafc; border-color:#334155;" onclick="App.logout()">
+                    🚪 Sair / Trocar Conta
+                </button>
+            </div>
+        </aside>
+
+        <!-- Área Principal -->
+        <main class="main-content">
+            <!-- 1. VIEW: DASHBOARD -->
+            <section id="view-dashboard" class="view-section">
+                <div class="page-header">
+                    <div class="page-title">
+                        <h2>Painel da Clínica</h2>
+                        <p id="dash-date-subtitle">Resumo operacional e clínico do dia</p>
+                    </div>
+                    <div style="display:flex; gap:0.65rem;">
+                        <button class="btn btn-secondary" onclick="App.openModalPaciente()">+ Novo Paciente</button>
+                        <button class="btn btn-primary" onclick="App.openModalSessao()">+ Agendar Sessão</button>
+                    </div>
+                </div>
+
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-label">Pacientes Ativos</div>
+                        <div class="kpi-value" id="kpi-pacientes">0</div>
+                        <div class="kpi-sub">Em acompanhamento regular</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Sessões Hoje</div>
+                        <div class="kpi-value" id="kpi-sessoes-hoje">0</div>
+                        <div class="kpi-sub" id="kpi-sessoes-mes">0 realizadas neste mês</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Receita Recebida (Mês)</div>
+                        <div class="kpi-value" style="color: var(--success);" id="kpi-receita-paga">R$ 0,00</div>
+                        <div class="kpi-sub">Pagamentos confirmados</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">A Receber / Pendentes</div>
+                        <div class="kpi-value" style="color: var(--warning);" id="kpi-receita-pendente">R$ 0,00</div>
+                        <div class="kpi-sub">Valores em aberto no mês</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Despesas do Consultório (Mês)</div>
+                        <div class="kpi-value" style="color: var(--danger);" id="kpi-despesas-mes">R$ 0,00</div>
+                        <div class="kpi-sub" id="kpi-despesas-sub">Saídas quitadas no mês</div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>📅 Agenda de Hoje</h3>
+                            <button class="btn btn-sm btn-secondary" onclick="App.navigate('agenda')">Ver Agenda Completa</button>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Horário</th>
+                                        <th>Paciente</th>
+                                        <th>Psicólogo(a)</th>
+                                        <th>Modalidade</th>
+                                        <th>Status</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dash-sessoes-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>💳 Pagamentos Pendentes</h3>
+                            <button class="btn btn-sm btn-secondary" onclick="App.navigate('financeiro')">Ir para Financeiro</button>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Vencimento</th>
+                                        <th>Paciente / Descrição</th>
+                                        <th>Valor</th>
+                                        <th>Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dash-pendencias-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD DE DESPESAS DO CONSULTÓRIO NA VISÃO GERAL -->
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <h3>🏢 Despesas do Consultório (Espaço Isa)</h3>
+                            <small style="color:#64748b;">Resumo das contas e custos operacionais lançados para o consultório</small>
+                        </div>
+                        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                            <button class="btn btn-sm btn-primary" onclick="App.openModalDespesaConsultorio()">+ Nova Despesa</button>
+                            <button class="btn btn-sm btn-secondary" onclick="App.navigate('despesas')">Ver Controle de Despesas</button>
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Vencimento</th>
+                                    <th>Categoria do Consultório</th>
+                                    <th>Descrição da Despesa</th>
+                                    <th>Forma Pagto.</th>
+                                    <th>Valor</th>
+                                    <th>Status</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-despesas-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. VIEW: AGENDA E SESSÕES -->
+            <section id="view-agenda" class="view-section" style="display:none;">
+                <div class="page-header">
+                    <div class="page-title">
+                        <h2>Agenda e Controle de Sessões</h2>
+                        <p>Marcação, confirmação, remarcação e presença de atendimentos</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="App.openModalSessao()">+ Agendar Nova Sessão</button>
+                </div>
+
+                <div class="card">
+                    <div class="filter-bar">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Data Inicial</label>
+                            <input type="date" id="filtro-agenda-inicio" class="form-control">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Data Final</label>
+                            <input type="date" id="filtro-agenda-fim" class="form-control">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Psicólogo(a)</label>
+                            <select id="filtro-agenda-psicologo" class="form-control">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Status</label>
+                            <select id="filtro-agenda-status" class="form-control">
+                                <option value="">Todos</option>
+                                <option value="Agendada">Agendada</option>
+                                <option value="Confirmada">Confirmada</option>
+                                <option value="Realizada">Realizada</option>
+                                <option value="Falta">Falta</option>
+                                <option value="Remarcada">Remarcada</option>
+                                <option value="Cancelada">Cancelada</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-secondary" onclick="App.loadAgenda()">Filtrar</button>
+                        <button class="btn btn-secondary" onclick="App.clearFiltroAgenda()">Todas as Datas</button>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Data / Hora</th>
+                                    <th>Paciente</th>
+                                    <th>Psicólogo(a)</th>
+                                    <th>Tipo / Modalidade</th>
+                                    <th>Status</th>
+                                    <th>Ações Rápidas</th>
+                                </tr>
+                            </thead>
+                            <tbody id="agenda-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. VIEW: PACIENTES -->
+            <section id="view-pacientes" class="view-section" style="display:none;">
+                <div class="page-header">
+                    <div class="page-title">
+                        <h2>Cadastro de Pacientes</h2>
+                        <p>Dados cadastrais, contatos de emergência, modalidade e vínculo terapêutico</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="App.openModalPaciente()">+ Cadastrar Paciente</button>
+                </div>
+
+                <div class="card">
+                    <div class="filter-bar">
+                        <div class="form-group" style="margin-bottom:0; flex:1; min-width:240px;">
+                            <label>Buscar por Nome, CPF ou Telefone</label>
+                            <input type="text" id="filtro-paciente-busca" class="form-control" placeholder="Digite para pesquisar..." oninput="App.loadPacientes()">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Status</label>
+                            <select id="filtro-paciente-status" class="form-control" onchange="App.loadPacientes()">
+                                <option value="">Todos</option>
+                                <option value="Ativo">Ativo</option>
+                                <option value="Pausado">Pausado</option>
+                                <option value="Alta">Alta</option>
+                                <option value="Inativo">Inativo</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Paciente / CPF</th>
+                                    <th>Telefone / Emergência</th>
+                                    <th>Psicólogo(a) Responsável</th>
+                                    <th>Cobrança / Valor</th>
+                                    <th>Sessões Realizadas</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pacientes-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. VIEW: PRONTUÁRIO ELETRÔNICO E ANAMNESE -->
+            <section id="view-prontuario" class="view-section" style="display:none;">
+                <div class="page-header">
+                    <div class="page-title">
+                        <h2>🔒 Prontuário Eletrônico & Evolução Clínica</h2>
+                        <p>Ambiente restrito ao Psicólogo (Resolução CFP nº 001/2009 e Código de Ética Profissional)</p>
+                    </div>
+                </div>
+
+                <div id="prontuario-bloqueado" class="card" style="display:none; border-color:#fca5a5; background:#fef2f2;">
+                    <h3 style="color:#991b1b; margin-bottom:0.5rem;">⛔ Acesso Restrito ao Sigilo Profissional</h3>
+                    <p style="color:#7f1d1d;" id="prontuario-bloqueado-msg">
+                        O perfil atual (Recepção/Secretaria) não possui permissão para visualizar fichas de anamnese ou evoluções de prontuário.
+                        Para testar o módulo clínico, selecione um perfil de <strong>Psicólogo(a)</strong> no canto inferior esquerdo.
+                    </p>
+                </div>
+
+                <div id="prontuario-conteudo">
+                    <div class="sigilo-banner">
+                        <span>🛡️</span>
+                        <div>
+                            <strong>Ambiente Seguro sob Sigilo Clínico:</strong> Todas as informações registradas na Anamnese e na Evolução de Sessões são confidenciais e inacessíveis ao perfil de recepção.
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="form-row" style="align-items:flex-end;">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label>Selecione o Paciente para abrir o Prontuário:</label>
+                                <select id="prontuario-paciente-select" class="form-control" onchange="App.loadProntuarioPaciente(this.value)">
+                                    <option value="">-- Selecione um paciente --</option>
+                                </select>
+                            </div>
+                            <div id="prontuario-actions" style="display:none; gap:0.5rem; flex-wrap:wrap;">
+                                <button class="btn btn-primary" onclick="App.openModalEvolucao()">+ Nova Evolução de Sessão</button>
+                                <button class="btn btn-secondary" onclick="App.imprimirDeclaracaoComparecimento()">📄 Declaração de Comparecimento</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="prontuario-detalhes" style="display:none;">
+                        <div class="grid-2">
+                            <!-- Coluna Esquerda: Evoluções Clínicas -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>📋 Histórico de Evoluções Clínicas</h3>
+                                    <span id="prontuario-contador-evolucoes" class="badge badge-info">0 registros</span>
+                                </div>
+                                <div id="prontuario-timeline" class="timeline"></div>
+                            </div>
+
+                            <!-- Coluna Direita: Ficha de Anamnese -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>🧠 Ficha de Anamnese Psicológica</h3>
+                                    <button class="btn btn-sm btn-primary" onclick="App.salvarAnamnese()">Salvar Anamnese</button>
+                                </div>
+                                <form id="form-anamnese" onsubmit="event.preventDefault(); App.salvarAnamnese();">
+                                    <div class="form-group">
+                                        <label>Queixa Principal e Demanda Inicial</label>
+                                        <textarea id="anam-queixa" class="form-control" placeholder="Motivo da busca pela psicoterapia..."></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Histórico dos Sintomas / Evolução da Queixa</label>
+                                        <textarea id="anam-sintomas" class="form-control" placeholder="Início, frequência, fatores desencadeantes..."></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Histórico Familiar e Dinâmica Relacional</label>
+                                        <textarea id="anam-familiar" class="form-control" placeholder="Relações familiares, rede de apoio, histórico na família..."></textarea>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>Histórico Médico / Psiquiátrico</label>
+                                            <textarea id="anam-medico" class="form-control"></textarea>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Medicamentos em Uso</label>
+                                            <textarea id="anam-medicamentos" class="form-control"></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Rotina, Sono e Alimentação</label>
+                                        <input type="text" id="anam-rotina" class="form-control">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Hipótese Diagnóstica Inicial / Avaliação</label>
+                                        <textarea id="anam-hipotese" class="form-control"></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Plano Terapêutico e Objetivos</label>
+                                        <textarea id="anam-plano" class="form-control"></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary" style="width:100%;">💾 Salvar Ficha de Anamnese</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. VIEW: FINANCEIRO -->
+            <section id="view-financeiro" class="view-section" style="display:none;">
+                <div class="page-header">
+                    <div class="page-title">
+                        <h2>Controle Financeiro e Emissão de Recibos</h2>
+                        <p>Gestão de pagamentos de sessões, pacotes mensais, despesas fixas da clínica e recibos</p>
+                    </div>
+                    <div style="display:flex; gap:0.65rem; flex-wrap:wrap;">
+                        <button class="btn btn-secondary" style="border-color:#4f46e5; color:#4f46e5;" id="btn-toggle-fluxo" onclick="App.toggleFluxoBalancete()">
+                            📑 Fluxo de Caixa & Balancete
+                        </button>
+                        <button class="btn btn-secondary" style="border-color:#0f766e; color:#0f766e;" id="btn-toggle-fin-dash" onclick="App.toggleDashboardFinanceiro()">
+                            📊 Gerar Dashboard Financeiro
+                        </button>
+                        <button class="btn btn-primary" onclick="App.openModalFinanceiro()">+ Novo Lançamento</button>
+                    </div>
+                </div>
+
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-label">Receitas Recebidas</div>
+                        <div class="kpi-value" style="color: var(--success);" id="fin-kpi-pagas">R$ 0,00</div>
+                        <div class="kpi-sub">Entradas quitadas</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Valores Pendentes</div>
+                        <div class="kpi-value" style="color: var(--warning);" id="fin-kpi-pendentes">R$ 0,00</div>
+                        <div class="kpi-sub" id="fin-kpi-pendentes-sub">Em aberto (A receber / A pagar)</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Despesas da Clínica (Pagas)</div>
+                        <div class="kpi-value" style="color: var(--danger);" id="fin-kpi-despesas">R$ 0,00</div>
+                        <div class="kpi-sub">Saídas quitadas</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Saldo Líquido (Caixa)</div>
+                        <div class="kpi-value" id="fin-kpi-saldo">R$ 0,00</div>
+                        <div class="kpi-sub">Receitas pagas - Despesas pagas</div>
+                    </div>
+                </div>
+
+                <!-- PAINEL DE DASHBOARD FINANCEIRO GERADO SOB DEMANDA -->
+                <div id="fin-dashboard-box" class="card fin-dash-panel" style="display:none;">
+                    <div class="card-header">
+                        <div>
+                            <h3 style="color:#0f766e;">📊 Dashboard de Análise Financeira — Espaço Isa</h3>
+                            <small style="color:#64748b;" id="fin-dash-periodo-label">Análise detalhada do balanço geral e despesas da clínica</small>
+                        </div>
+                        <div class="no-print" style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
+                            <div class="chart-mode-toggle">
+                                <button type="button" class="chart-mode-btn active" id="btn-mode-pizza" onclick="App.setModoGrafico('pizza')">🍕 Pizza</button>
+                                <button type="button" class="chart-mode-btn" id="btn-mode-barras" onclick="App.setModoGrafico('barras')">📊 Barras</button>
+                            </div>
+                            <button class="btn btn-sm btn-secondary" onclick="App.imprimirDashboardFinanceiro()">🖨️ Imprimir / PDF</button>
+                            <button class="btn btn-sm btn-secondary" onclick="App.toggleDashboardFinanceiro()">✕ Fechar Dash</button>
+                        </div>
+                    </div>
+
+                    <div id="fin-dash-print-content">
+                        <div class="fin-indicators-row" id="fin-dash-mini-stats"></div>
+
+                        <div class="grid-2 grid-2-equal">
+                            <div style="background:#ffffff; border:1px solid var(--border); border-radius:12px; padding:1.35rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                                <h4 style="font-size:1rem; margin-bottom:1.1rem; color:#0f172a; border-bottom:1px solid #f1f5f9; padding-bottom:0.6rem;">
+                                    📈 Balanço Geral (Receitas x Despesas x Pendentes)
+                                </h4>
+                                <div id="fin-chart-balanco"></div>
+                            </div>
+
+                            <div style="background:#ffffff; border:1px solid var(--border); border-radius:12px; padding:1.35rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                                <h4 style="font-size:1rem; margin-bottom:1.1rem; color:#0f172a; border-bottom:1px solid #f1f5f9; padding-bottom:0.6rem;">
+                                    🏢 Despesas da Clínica (Aluguel, Energia, Água, Internet, IPTU)
+                                </h4>
+                                <div id="fin-chart-despesas-cat"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PAINEL: RELATÓRIO DE FLUXO DE CAIXA E BALANCETE SIMPLES -->
+                <div id="fin-fluxo-balancete-box" class="card" style="display:none; border:2px solid #c7d2fe; background:linear-gradient(180deg, #eef2ff 0%, #ffffff 110px);">
+                    <div class="card-header">
+                        <div>
+                            <h3 style="color:#3730a3;">📑 Relatório de Fluxo de Caixa & Balancete Simples — Espaço Isa</h3>
+                            <small style="color:#64748b;" id="fin-fluxo-periodo-label">Demonstrativo de entradas, saídas do consultório e saldo acumulado</small>
+                        </div>
+                        <div class="no-print" style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                            <button class="btn btn-sm btn-secondary" onclick="App.imprimirFluxoBalancete()">🖨️ Imprimir Relatório / PDF</button>
+                            <button class="btn btn-sm btn-secondary" onclick="App.toggleFluxoBalancete()">✕ Fechar Relatório</button>
+                        </div>
+                    </div>
+
+                    <div id="fin-fluxo-print-content">
+                        <!-- 1. BALANCETE SIMPLES -->
+                        <h4 style="font-size:1rem; color:#0f172a; margin-bottom:0.85rem;">1. Balancete Simples (Entradas x Saídas por Categoria)</h4>
+                        <div class="grid-2 grid-2-equal" style="margin-bottom:1.25rem;">
+                            <div style="background:#ffffff; border:1px solid #bbf7d0; border-radius:10px; padding:1.1rem;">
+                                <h5 style="color:#15803d; font-size:0.92rem; margin-bottom:0.75rem; border-bottom:1px solid #dcfce7; padding-bottom:0.45rem;">
+                                    🟢 ENTRADAS (Receitas de Atendimento)
+                                </h5>
+                                <div id="balancete-entradas-body"></div>
+                            </div>
+                            <div style="background:#ffffff; border:1px solid #fecaca; border-radius:10px; padding:1.1rem;">
+                                <h5 style="color:#b91c1c; font-size:0.92rem; margin-bottom:0.75rem; border-bottom:1px solid #fee2e2; padding-bottom:0.45rem;">
+                                    🔴 SAÍDAS (Despesas do Consultório)
+                                </h5>
+                                <div id="balancete-saidas-body"></div>
+                            </div>
+                        </div>
+
+                        <div id="balancete-resumo-final" style="margin-bottom:1.75rem;"></div>
+
+                        <!-- 2. EXTRATO DE FLUXO DE CAIXA -->
+                        <h4 style="font-size:1rem; color:#0f172a; margin-bottom:0.85rem;">2. Demonstrativo de Fluxo de Caixa (Movimentação de Entrada e Saída)</h4>
+                        <div class="table-wrap" style="background:#ffffff; border:1px solid var(--border); border-radius:10px;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Histórico / Descrição</th>
+                                        <th>Categoria</th>
+                                        <th>Status</th>
+                                        <th style="color:#15803d;">Entrada (+)</th>
+                                        <th style="color:#b91c1c;">Saída (-)</th>
+                                        <th>Saldo Caixa (=)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fluxo-caixa-tbody"></tbody>
+                                <tfoot id="fluxo-caixa-tfoot"></tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="filter-bar">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Mês de Referência</label>
+                            <input type="month" id="filtro-fin-mes" class="form-control" onchange="App.loadFinanceiro()">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Tipo</label>
+                            <select id="filtro-fin-tipo" class="form-control" onchange="App.loadFinanceiro()">
+                                <option value="">Receitas e Despesas</option>
+                                <option value="Receita">Apenas Receitas</option>
+                                <option value="Despesa">Apenas Despesas</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Status</label>
+                            <select id="filtro-fin-status" class="form-control" onchange="App.loadFinanceiro()">
+                                <option value="">Todos</option>
+                                <option value="Pago">Pago</option>
+                                <option value="Pendente">Pendente</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-secondary" onclick="document.getElementById('filtro-fin-mes').value=''; App.loadFinanceiro();">Ver Todo o Período</button>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Vencimento</th>
+                                    <th>Tipo / Categoria</th>
+                                    <th>Descrição / Paciente</th>
+                                    <th>Forma Pagto.</th>
+                                    <th>Valor</th>
+                                    <th>Status</th>
+                                    <th>Ações / Recibo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="financeiro-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5B. VIEW: DESPESAS EXCLUSIVAS DO CONSULTÓRIO -->
+            <section id="view-despesas" class="view-section" style="display:none;">
+                <div class="page-header">
+                    <div class="page-title">
+                        <h2>🏢 Controle de Despesas do Consultório — Espaço Isa</h2>
+                        <p>Gestão exclusiva das contas e custos operacionais do consultório (sem vínculo com pacientes)</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="App.openModalDespesaConsultorio()">+ Nova Despesa do Consultório</button>
+                </div>
+
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-label">Despesas Pagas (Quitadas)</div>
+                        <div class="kpi-value" style="color: var(--danger);" id="desp-kpi-pagas">R$ 0,00</div>
+                        <div class="kpi-sub">Contas do consultório já pagas</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Contas a Pagar (Pendentes)</div>
+                        <div class="kpi-value" style="color: var(--warning);" id="desp-kpi-pendentes">R$ 0,00</div>
+                        <div class="kpi-sub">Vencimentos em aberto</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Custo Total do Consultório</div>
+                        <div class="kpi-value" id="desp-kpi-total">R$ 0,00</div>
+                        <div class="kpi-sub">Soma de pagas + pendentes</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Maior Categoria de Custo</div>
+                        <div class="kpi-value" style="font-size:1.3rem; color: var(--primary);" id="desp-kpi-maior-cat">-</div>
+                        <div class="kpi-sub" id="desp-kpi-maior-valor">No período selecionado</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="filter-bar">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Mês de Referência</label>
+                            <input type="month" id="filtro-desp-mes" class="form-control" onchange="App.loadDespesasConsultorio()">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Categoria do Consultório</label>
+                            <select id="filtro-desp-categoria" class="form-control" onchange="App.loadDespesasConsultorio()">
+                                <option value="">Todas as Categorias</option>
+                                <option value="Despesas">Despesas</option>
+                                <option value="Aluguel da Clínica">Aluguel da Clínica</option>
+                                <option value="Energia">Energia Elétrica</option>
+                                <option value="Água">Água</option>
+                                <option value="Internet">Internet / Telefone</option>
+                                <option value="IPTU">IPTU</option>
+                                <option value="Material / Brinquedos Terapêuticos">Material / Brinquedos Terapêuticos</option>
+                                <option value="Limpeza / Copa">Limpeza / Higiene / Copa</option>
+                                <option value="Manutenção">Manutenção / Equipamentos</option>
+                                <option value="Conselho CRP / Impostos">CRP / Contabilidade / Impostos</option>
+                                <option value="Outros">Outras Despesas</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Status</label>
+                            <select id="filtro-desp-status" class="form-control" onchange="App.loadDespesasConsultorio()">
+                                <option value="">Todos</option>
+                                <option value="Pago">Pago / Quitado</option>
+                                <option value="Pendente">Pendente (A Pagar)</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-secondary" onclick="document.getElementById('filtro-desp-mes').value=''; App.loadDespesasConsultorio();">Ver Todo o Período</button>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Vencimento</th>
+                                    <th>Categoria do Consultório</th>
+                                    <th>Descrição da Despesa</th>
+                                    <th>Forma Pagto.</th>
+                                    <th>Valor</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="despesas-consultorio-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. VIEW: PSICÓLOGOS E EQUIPE -->
+            <section id="view-psicologos" class="view-section" style="display:none;">
+                <div class="page-header">
+                    <div class="page-title">
+                        <h2>Corpo Clínico (Psicólogos) e Recepção</h2>
+                        <p>Profissionais cadastrados, registro CRP, abordagem teórica e valores de referência</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="App.openModalUsuario()">+ Novo Profissional</button>
+                </div>
+
+                <div class="card">
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Perfil</th>
+                                    <th>Registro CRP</th>
+                                    <th>Abordagem / Função</th>
+                                    <th>Telefone / E-mail</th>
+                                    <th>Valor Sessão Padrão</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usuarios-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL: PACIENTE -->
+    <div class="modal-backdrop" id="modal-paciente">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-paciente-titulo">Cadastrar Paciente</h3>
+                <button class="btn btn-sm btn-secondary" onclick="App.closeModal('modal-paciente')">✕</button>
+            </div>
+            <form id="form-paciente" onsubmit="event.preventDefault(); App.salvarPaciente();">
+                <input type="hidden" id="pac-id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nome Completo *</label>
+                        <input type="text" id="pac-nome" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>CPF</label>
+                        <input type="text" id="pac-cpf" class="form-control" placeholder="000.000.000-00">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Data de Nascimento</label>
+                        <input type="date" id="pac-nascimento" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Telefone / WhatsApp *</label>
+                        <input type="text" id="pac-telefone" class="form-control" placeholder="(11) 99999-9999" required>
+                    </div>
+                    <div class="form-group">
+                        <label>E-mail</label>
+                        <input type="email" id="pac-email" class="form-control">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Endereço Completo</label>
+                    <input type="text" id="pac-endereco" class="form-control">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Contato de Emergência (Nome e Parentesco)</label>
+                        <input type="text" id="pac-emerg-nome" class="form-control" placeholder="Ex: Maria (Mãe)">
+                    </div>
+                    <div class="form-group">
+                        <label>Telefone de Emergência</label>
+                        <input type="text" id="pac-emerg-tel" class="form-control">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Psicólogo(a) Responsável</label>
+                        <select id="pac-psicologo" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Modalidade Padrão</label>
+                        <select id="pac-modalidade" class="form-control">
+                            <option value="Presencial">Presencial</option>
+                            <option value="Online">Online</option>
+                            <option value="Híbrido">Híbrido</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Tipo de Cobrança</label>
+                        <select id="pac-cobranca" class="form-control">
+                            <option value="Por Sessão">Por Sessão</option>
+                            <option value="Pacote Mensal">Pacote Mensal</option>
+                            <option value="Convênio">Convênio</option>
+                            <option value="Social">Valor Social</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Valor Acordado (R$)</label>
+                        <input type="number" step="0.01" id="pac-valor" class="form-control" value="180.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="pac-status" class="form-control">
+                            <option value="Ativo">Ativo</option>
+                            <option value="Pausado">Pausado</option>
+                            <option value="Alta">Alta Terapêutica</option>
+                            <option value="Inativo">Inativo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Observações Administrativas / Horários de Preferência</label>
+                    <textarea id="pac-obs" class="form-control"></textarea>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:0.75rem;">
+                    <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-paciente')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Paciente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: AGENDAR / EDITAR SESSÃO -->
+    <div class="modal-backdrop" id="modal-sessao">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-sessao-titulo">Agendar Sessão</h3>
+                <button class="btn btn-sm btn-secondary" onclick="App.closeModal('modal-sessao')">✕</button>
+            </div>
+            <form id="form-sessao" onsubmit="event.preventDefault(); App.salvarSessao();">
+                <input type="hidden" id="ses-id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Paciente *</label>
+                        <select id="ses-paciente" class="form-control" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Psicólogo(a) *</label>
+                        <select id="ses-psicologo" class="form-control" required></select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Data da Sessão *</label>
+                        <input type="date" id="ses-data" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Horário de Início *</label>
+                        <input type="time" id="ses-hora" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Duração (min)</label>
+                        <input type="number" id="ses-duracao" class="form-control" value="50">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Modalidade</label>
+                        <select id="ses-modalidade" class="form-control">
+                            <option value="Presencial">Presencial</option>
+                            <option value="Online">Online (Telepsicologia)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo de Atendimento</label>
+                        <select id="ses-tipo" class="form-control">
+                            <option value="Individual">Individual</option>
+                            <option value="Primeira Consulta / Anamnese">Primeira Consulta / Anamnese</option>
+                            <option value="Casal / Família">Casal / Família</option>
+                            <option value="Infantil">Infantil / Ludoterapia</option>
+                            <option value="Devolutiva">Sessão Devolutiva</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="ses-status" class="form-control">
+                            <option value="Agendada">Agendada</option>
+                            <option value="Confirmada">Confirmada</option>
+                            <option value="Realizada">Realizada</option>
+                            <option value="Falta">Falta</option>
+                            <option value="Remarcada">Remarcada</option>
+                            <option value="Cancelada">Cancelada</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Observações da Agenda (Link da chamada, sala, avisos)</label>
+                    <input type="text" id="ses-obs" class="form-control">
+                </div>
+                <div class="form-group" id="ses-cobranca-wrap">
+                    <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                        <input type="checkbox" id="ses-gerar-cobranca" checked>
+                        Gerar lançamento automático no Financeiro (caso paciente seja "Por Sessão")
+                    </label>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:0.75rem;">
+                    <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-sessao')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Agendamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: EVOLUÇÃO DE PRONTUÁRIO -->
+    <div class="modal-backdrop" id="modal-evolucao">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>🔒 Registrar Evolução de Sessão</h3>
+                <button class="btn btn-sm btn-secondary" onclick="App.closeModal('modal-evolucao')">✕</button>
+            </div>
+            <form id="form-evolucao" onsubmit="event.preventDefault(); App.salvarEvolucao();">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Data do Atendimento *</label>
+                        <input type="date" id="evo-data" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Vincular à Sessão Agendada (Opcional)</label>
+                        <select id="evo-sessao" class="form-control">
+                            <option value="">-- Sem vínculo específico --</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Estado Emocional / Humor Observado</label>
+                    <input type="text" id="evo-humor" class="form-control" placeholder="Ex: Eutímica, ansiosa, reflexiva, colaborativa...">
+                </div>
+                <div class="form-group">
+                    <label>Síntese / Evolução Clínica da Sessão *</label>
+                    <textarea id="evo-relato" class="form-control" required placeholder="Registro técnico do atendimento conforme diretrizes do CFP..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Técnicas / Intervenções Realizadas</label>
+                    <textarea id="evo-intervencoes" class="form-control" placeholder="Ex: Questionamento socrático, escuta analítica, reestruturação cognitiva..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Encaminhamentos / Tarefas Terapêuticas</label>
+                    <input type="text" id="evo-tarefas" class="form-control" placeholder="Atividades acordadas para a semana...">
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:0.75rem;">
+                    <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-evolucao')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Registrar no Prontuário</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: LANÇAMENTO FINANCEIRO -->
+    <div class="modal-backdrop" id="modal-financeiro">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-financeiro-titulo">Lançamento Financeiro</h3>
+                <button class="btn btn-sm btn-secondary" onclick="App.closeModal('modal-financeiro')">✕</button>
+            </div>
+            <form id="form-financeiro" onsubmit="event.preventDefault(); App.salvarFinanceiro();">
+                <input type="hidden" id="fin-id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Tipo de Lançamento</label>
+                        <select id="fin-tipo" class="form-control" onchange="App.aoMudarTipoFinanceiro(this.value)">
+                            <option value="Receita">Receita (Entrada de Paciente)</option>
+                            <option value="Despesa">Despesa (Exclusiva do Consultório)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Categoria</label>
+                        <select id="fin-categoria" class="form-control" onchange="App.aoMudarCategoriaFinanceiro(this.value)">
+                            <optgroup label="Receitas de Atendimento">
+                                <option value="Sessão">Sessão Individual</option>
+                                <option value="Pacote Mensal">Pacote Mensal</option>
+                                <option value="Avaliação / Laudo">Avaliação / Laudo</option>
+                                <option value="Outros">Outros</option>
+                            </optgroup>
+                            <optgroup label="Controle de Despesas do Consultório (Espaço Isa)">
+                                <option value="Despesas">Despesas</option>
+                                <option value="Aluguel da Clínica">Aluguel da Clínica</option>
+                                <option value="Energia">Energia Elétrica</option>
+                                <option value="Água">Água</option>
+                                <option value="Internet">Internet / Telefone</option>
+                                <option value="IPTU">IPTU</option>
+                                <option value="Material / Brinquedos Terapêuticos">Material / Brinquedos Terapêuticos</option>
+                                <option value="Limpeza / Copa">Limpeza / Higiene / Copa</option>
+                                <option value="Manutenção">Manutenção / Equipamentos</option>
+                                <option value="Conselho CRP / Impostos">CRP / Contabilidade / Impostos</option>
+                                <option value="Outros">Outras Despesas do Consultório</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Descrição *</label>
+                    <input type="text" id="fin-descricao" class="form-control" required placeholder="Ex: Pacote Mensal 4 sessões ou Despesa do Consultório...">
+                </div>
+                <div class="form-row" id="fin-vinculo-paciente-row">
+                    <div class="form-group">
+                        <label>Paciente (Apenas para Receitas)</label>
+                        <select id="fin-paciente" class="form-control">
+                            <option value="">-- Nenhum --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Psicólogo(a)</label>
+                        <select id="fin-psicologo" class="form-control">
+                            <option value="">-- Clínica Geral --</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Valor (R$) *</label>
+                        <input type="number" step="0.01" id="fin-valor" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Data de Vencimento *</label>
+                        <input type="date" id="fin-vencimento" class="form-control" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Status do Pagamento</label>
+                        <select id="fin-status" class="form-control">
+                            <option value="Pago">Pago / Quitado</option>
+                            <option value="Pendente">Pendente</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Forma de Pagamento</label>
+                        <select id="fin-forma" class="form-control">
+                            <option value="PIX">PIX</option>
+                            <option value="Cartão de Crédito">Cartão de Crédito</option>
+                            <option value="Cartão de Débito">Cartão de Débito</option>
+                            <option value="Transferência">Transferência Bancária</option>
+                            <option value="Dinheiro">Dinheiro</option>
+                            <option value="Convênio">Convênio / Reembolso</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:0.75rem;">
+                    <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-financeiro')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Lançamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CADASTRO / EDIÇÃO DE PROFISSIONAL -->
+    <div class="modal-backdrop" id="modal-usuario">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-usuario-titulo">Cadastrar Profissional da Clínica</h3>
+                <button class="btn btn-sm btn-secondary" onclick="App.closeModal('modal-usuario')">✕</button>
+            </div>
+            <form id="form-usuario" onsubmit="event.preventDefault(); App.salvarUsuario();">
+                <input type="hidden" id="usr-id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nome Completo *</label>
+                        <input type="text" id="usr-nome" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Perfil de Acesso *</label>
+                        <select id="usr-perfil" class="form-control">
+                            <option value="psicologo">Doutor(a) / Psicólogo(a) (Somente Prontuários e Agendas)</option>
+                            <option value="admin">Administrador(a) (Acesso Total ao Sistema)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Registro CRP (Se Doutor/Psicólogo)</label>
+                        <input type="text" id="usr-crp" class="form-control" placeholder="Ex: CRP 06/123456">
+                    </div>
+                    <div class="form-group">
+                        <label>Abordagem Teórica / Especialidade</label>
+                        <input type="text" id="usr-abordagem" class="form-control" placeholder="Ex: TCC, Psicanálise, Fenomenologia...">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>E-mail de Login *</label>
+                        <input type="email" id="usr-email" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Senha de Acesso (deixe em branco p/ manter)</label>
+                        <input type="password" id="usr-senha" class="form-control" placeholder="Padrão: 123456">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Telefone</label>
+                        <input type="text" id="usr-telefone" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Valor Sessão Padrão (R$)</label>
+                        <input type="number" step="0.01" id="usr-valor" class="form-control" value="180.00">
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:0.75rem;">
+                    <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-usuario')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Profissional</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+    <script src="/static/js/app.js?v=20"></script>
+</body>
+</html>
