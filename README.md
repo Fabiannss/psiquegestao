@@ -1,6 +1,10 @@
-# Psiquê Gestão — Sistema de Gerenciamento para Clínica de Psicologia
+# Psiquê Gestão — Espaço Isa
 
-Aplicação Web desenvolvida em **Python + SQLite** para gestão integrada de clínicas e consultórios de psicologia, respeitando o sigilo clínico do Código de Ética Profissional do Psicólogo (CFP).
+Aplicação Web desenvolvida em **Python + SQLite** para gestão integrada da clínica de psicologia e desenvolvimento infantil **Espaço Isa**.
+
+## 🚀 Deploy em Produção
+- **Vercel**: [psiquegestao.vercel.app](https://psiquegestao.vercel.app)
+- **GitHub**: [Fabiannss/psiquegestao](https://github.com/Fabiannss/psiquegestao)
 
 ## Funcionalidades Incluídas (MVP Completo)
 
