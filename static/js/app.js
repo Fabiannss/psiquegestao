@@ -637,8 +637,8 @@ const App = {
                     <small style="color:#64748b;">${s.modalidade} ${s.observacoes_agenda ? `• ${s.observacoes_agenda}` : ""}</small>
                 </td>
                 <td>${this.badgeStatusSessao(s.status)}</td>
-                <td>
-                    <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+                <td style="white-space:nowrap;">
+                    <div style="display:flex; gap:0.35rem; align-items:center; flex-wrap:nowrap; white-space:nowrap;">
                         <button class="btn btn-sm btn-secondary" onclick="App.mudarStatusSessao(${s.id}, 'Confirmada')">Confirmar</button>
                         <button class="btn btn-sm btn-primary" onclick="App.mudarStatusSessao(${s.id}, 'Realizada')">✓ Realizada</button>
                         <button class="btn btn-sm btn-secondary" onclick="App.mudarStatusSessao(${s.id}, 'Falta')">Falta</button>
