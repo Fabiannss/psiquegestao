@@ -49,7 +49,7 @@ def ensure_admin_exists(conn):
             INSERT OR IGNORE INTO usuarios (nome, email, senha_hash, perfil, crp, abordagem, telefone, valor_sessao_padrao, ativo)
             VALUES (?, ?, ?, 'admin', NULL, 'Administração Geral', '(11) 99999-0000', 0.0, 1)
             """,
-            ("Administrador da Clínica", "admin@clinica.psi.br", hash_password("123456")),
+            ("Administrador da Clínica", "admin", hash_password("admin123")),
         )
         conn.commit()
 
@@ -103,7 +103,7 @@ def handle_login(body: dict):
     ).fetchone()
     conn.close()
     if not user:
-        raise APIError("E-mail ou senha incorretos.", 401)
+        raise APIError("Usuário ou senha incorretos.", 401)
     return {"usuario": row_to_dict(user)}
 
 
