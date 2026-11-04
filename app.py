@@ -1021,15 +1021,15 @@ def wsgi_app(environ, start_response):
     no_cache = [("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")]
 
     # Servir página principal
-    if path == "/" and method == "GET":
+    if path == "/" and method in ("GET", "HEAD"):
         index_path = os.path.join(BASE_DIR, "templates", "index.html")
         with open(index_path, "rb") as f:
             content = f.read()
-        start_response("200 OK", [("Content-Type", "text/html; charset=utf-8")] + no_cache)
-        return [content]
+        start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"), ("Content-Length", str(len(content)))] + no_cache)
+        return [] if method == "HEAD" else [content]
 
     # Servir arquivos estáticos
-    if path.startswith("/static/") and method == "GET":
+    if path.startswith("/static/") and method in ("GET", "HEAD"):
         rel_path = path.lstrip("/").replace("/", os.sep)
         abs_path = os.path.abspath(os.path.join(BASE_DIR, rel_path))
         if abs_path.startswith(os.path.join(BASE_DIR, "static")) and os.path.isfile(abs_path):
@@ -1038,9 +1038,9 @@ def wsgi_app(environ, start_response):
                 content = f.read()
             start_response(
                 "200 OK",
-                [("Content-Type", f"{mime or 'application/octet-stream'}; charset=utf-8")] + no_cache,
+                [("Content-Type", f"{mime or 'application/octet-stream'}; charset=utf-8"), ("Content-Length", str(len(content)))] + no_cache,
             )
-            return [content]
+            return [] if method == "HEAD" else [content]
         start_response("404 Not Found", [("Content-Type", "text/plain; charset=utf-8")])
         return [b"Arquivo nao encontrado"]
 
