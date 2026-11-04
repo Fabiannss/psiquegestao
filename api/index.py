@@ -1,5 +1,6 @@
 import sys
 import os
+from urllib.parse import parse_qs
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
@@ -14,14 +15,14 @@ except Exception as e:
     print(f"Erro ao inicializar DB: {e}")
 
 def app(environ, start_response):
-    path_info = environ.get("PATH_INFO", "")
-    if path_info in ("/api/index.py", "/api/index", "/api", "/api/"):
-        matched = environ.get("HTTP_X_MATCHED_PATH") or environ.get("RAW_URI") or environ.get("REQUEST_URI")
-        if matched and matched not in ("/api/index.py", "/api/index"):
-            environ["PATH_INFO"] = matched.split("?")[0]
-        else:
-            environ["PATH_INFO"] = "/"
-    elif path_info.startswith("/api/index.py/"):
-        environ["PATH_INFO"] = path_info.replace("/api/index.py", "", 1)
-        
+    qs = parse_qs(environ.get("QUERY_STRING", ""))
+    if "__path" in qs and qs["__path"]:
+        orig_path = qs["__path"][0]
+        environ["PATH_INFO"] = orig_path if orig_path.startswith("/") else f"/{orig_path}"
+        # Remove __path do QUERY_STRING para não poluir as queries da API
+        query_pairs = [p for p in environ.get("QUERY_STRING", "").split("&") if not p.startswith("__path=")]
+        environ["QUERY_STRING"] = "&".join(query_pairs)
+    elif environ.get("PATH_INFO") in ("/api/index.py", "/api/index", "/api", "/api/"):
+        environ["PATH_INFO"] = "/"
+
     return wsgi_app(environ, start_response)
