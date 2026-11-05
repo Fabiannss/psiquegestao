@@ -1,8 +1,16 @@
-import sqlite3
 import hashlib
+import json
 import os
 import shutil
+import sqlite3
+import urllib.request
 from datetime import datetime, timedelta
+
+TURSO_URL = os.environ.get("TURSO_DATABASE_URL", "libsql://psiquegestao-fabiannss.aws-sa-east-1.turso.io")
+TURSO_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTM4ODUwNTMsImlkIjoiMDFhMWFiZGItODIwMS03N2I5LTk0NzEtZjIzNzRmZWY4ODFmIiwia2lkIjoielV6NGgxUDBMdGxZcWZ0N2ZKX3c1dG5nUC1NZ3ZCQjR3V0ZZQnNOWjREUSIsInJpZCI6ImFlNDJjZThlLTU3ZmUtNDk1NC1hN2VjLTJhMDc1NDRjMTk3NCJ9.PX4anEde4FawPsLB8Nc6YhXaTpTCxKm2SeJbX0RaVyEI89dop-CdvrTuwj4zJ4lVbRKn3SROzfJ71quCj-BEBA")
+
+def use_turso() -> bool:
+    return bool(TURSO_URL and TURSO_TOKEN)
 
 def get_db_path():
     if os.environ.get("VERCEL"):
@@ -15,23 +23,140 @@ def get_db_path():
 
 DB_PATH = get_db_path()
 
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+class TursoRow(dict):
+    def __init__(self, cols, values):
+        super().__init__()
+        for col, val in zip(cols, values):
+            self[col] = val
+
+    def __getitem__(self, item):
+        if isinstance(item, int):
+            return list(self.values())[item]
+        return super().__getitem__(item)
+
+class TursoCursor:
+    def __init__(self, conn):
+        self.conn = conn
+        self.description = None
+        self._rows = []
+        self.lastrowid = None
+        self.rowcount = 0
+
+    def execute(self, sql: str, params: tuple = ()):
+        res = self.conn._execute_remote(sql, params)
+        cols = [c.get("name") for c in res.get("cols", [])]
+        self.description = [(c, None, None, None, None, None, None) for c in cols]
+        self.lastrowid = res.get("last_insert_rowid")
+        if self.lastrowid is not None:
+            try:
+                self.lastrowid = int(self.lastrowid)
+            except Exception:
+                pass
+        self.rowcount = res.get("affected_row_count", 0)
+
+        raw_rows = res.get("rows", [])
+        self._rows = []
+        for r in raw_rows:
+            parsed_vals = []
+            for cell in r:
+                t = cell.get("type")
+                v = cell.get("value")
+                if t == "null" or v is None:
+                    parsed_vals.append(None)
+                elif t == "integer":
+                    parsed_vals.append(int(v))
+                elif t == "float":
+                    parsed_vals.append(float(v))
+                else:
+                    parsed_vals.append(v)
+            self._rows.append(TursoRow(cols, parsed_vals))
+        return self
+
+    def fetchone(self):
+        if self._rows:
+            return self._rows.pop(0)
+        return None
+
+    def fetchall(self):
+        rows = self._rows
+        self._rows = []
+        return rows
+
+class TursoConnection:
+    def __init__(self, url: str, token: str):
+        endpoint = url.replace("libsql://", "https://")
+        if not endpoint.startswith("http"):
+            endpoint = "https://" + endpoint
+        self.endpoint = endpoint.rstrip("/") + "/v2/pipeline"
+        self.token = token
+        self.row_factory = None
+
+    def _execute_remote(self, sql: str, params: tuple = ()):
+        args = []
+        for p in params:
+            if p is None:
+                args.append({"type": "null"})
+            elif isinstance(p, int):
+                args.append({"type": "integer", "value": str(p)})
+            elif isinstance(p, float):
+                args.append({"type": "float", "value": p})
+            elif isinstance(p, bytes):
+                args.append({"type": "blob", "base64": p.decode("latin1")})
+            else:
+                args.append({"type": "text", "value": str(p)})
+
+        stmt = {"sql": sql}
+        if args:
+            stmt["args"] = args
+
+        payload = json.dumps({"requests": [{"type": "execute", "stmt": stmt}]}).encode("utf-8")
+        req = urllib.request.Request(
+            self.endpoint,
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {self.token}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            first = data.get("results", [])[0]
+            if first.get("type") == "error":
+                raise RuntimeError(first.get("error", {}).get("message", "Erro Turso"))
+            return first.get("response", {}).get("result", {})
+
+    def cursor(self):
+        return TursoCursor(self)
+
+    def execute(self, sql: str, params: tuple = ()):
+        cur = self.cursor()
+        return cur.execute(sql, params)
+
+    def commit(self):
+        pass
+
+    def rollback(self):
+        pass
+
+    def close(self):
+        pass
 
 def get_connection():
+    if use_turso():
+        return TursoConnection(TURSO_URL, TURSO_TOKEN)
     conn = sqlite3.connect(get_db_path())
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
-
-def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
-
-
 def init_db():
     conn = get_connection()
     cursor = conn.cursor()
 
-    # 1. Tabela de Usuários / Psicólogos e Recepção
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS usuarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,7 +173,6 @@ def init_db():
     )
     """)
 
-    # 2. Tabela de Pacientes
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS pacientes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,7 +195,6 @@ def init_db():
     )
     """)
 
-    # 3. Tabela de Anamnese (Sigilo Clínico - Restrito ao Psicólogo)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS anamneses (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -92,7 +215,6 @@ def init_db():
     )
     """)
 
-    # 4. Tabela de Agenda / Sessões
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS sessoes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -111,7 +233,6 @@ def init_db():
     )
     """)
 
-    # 5. Tabela de Prontuário / Evolução de Sessões (Sigilo Clínico - Restrito ao Psicólogo)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS prontuario_evolucoes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -131,7 +252,6 @@ def init_db():
     )
     """)
 
-    # 6. Tabela Financeira (Receitas de Sessões/Pacotes e Despesas da Clínica)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS financeiro (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -159,8 +279,7 @@ def init_db():
     ensure_admin_user(conn)
     conn.close()
 
-
-def ensure_admin_user(conn: sqlite3.Connection):
+def ensure_admin_user(conn):
     cursor = conn.cursor()
     adm = cursor.execute("SELECT id FROM usuarios WHERE perfil = 'admin' AND ativo = 1").fetchone()
     if not adm:
@@ -173,11 +292,10 @@ def ensure_admin_user(conn: sqlite3.Connection):
         )
         conn.commit()
 
-
-def seed_initial_data(conn: sqlite3.Connection):
+def seed_initial_data(conn):
     cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) as total FROM usuarios")
-    if cursor.fetchone()["total"] > 0:
+    row = cursor.execute("SELECT COUNT(*) as total FROM usuarios").fetchone()
+    if row and row["total"] > 0:
         return
 
     hoje = datetime.now().strftime("%Y-%m-%d")
@@ -185,7 +303,6 @@ def seed_initial_data(conn: sqlite3.Connection):
     amanha = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
     semana_passada = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
 
-    # Usuários iniciais
     usuarios = [
         (
             "Dra. Helena Martins",
@@ -218,15 +335,15 @@ def seed_initial_data(conn: sqlite3.Connection):
             0.0,
         ),
     ]
-    cursor.executemany(
-        """
-        INSERT INTO usuarios (nome, email, senha_hash, perfil, crp, abordagem, telefone, valor_sessao_padrao)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        usuarios,
-    )
+    for u in usuarios:
+        cursor.execute(
+            """
+            INSERT INTO usuarios (nome, email, senha_hash, perfil, crp, abordagem, telefone, valor_sessao_padrao)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            u,
+        )
 
-    # Pacientes iniciais
     pacientes = [
         (
             "Mariana Costa Silva",
@@ -277,19 +394,19 @@ def seed_initial_data(conn: sqlite3.Connection):
             "Encaminhada por psiquiatra parceiro.",
         ),
     ]
-    cursor.executemany(
-        """
-        INSERT INTO pacientes (
-            nome, cpf, data_nascimento, telefone, email, endereco,
-            contato_emergencia_nome, contato_emergencia_telefone,
-            psicologo_id, modalidade_padrao, tipo_cobranca, valor_acordado,
-            status, observacoes_administrativas
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        pacientes,
-    )
+    for p in pacientes:
+        cursor.execute(
+            """
+            INSERT INTO pacientes (
+                nome, cpf, data_nascimento, telefone, email, endereco,
+                contato_emergencia_nome, contato_emergencia_telefone,
+                psicologo_id, modalidade_padrao, tipo_cobranca, valor_acordado,
+                status, observacoes_administrativas
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            p,
+        )
 
-    # Anamnese inicial (Mariana - Dra. Helena)
     cursor.execute(
         """
         INSERT INTO anamneses (
@@ -313,7 +430,6 @@ def seed_initial_data(conn: sqlite3.Connection):
         ),
     )
 
-    # Sessões iniciais
     sessoes = [
         (1, 1, semana_passada, "09:00", 50, "Presencial", "Primeira Consulta / Anamnese", "Realizada", "Primeira sessão concluída."),
         (1, 1, hoje, "09:00", 50, "Presencial", "Individual", "Confirmada", "Sessão semanal de acompanhamento."),
@@ -321,17 +437,17 @@ def seed_initial_data(conn: sqlite3.Connection):
         (3, 2, hoje, "14:00", 50, "Presencial", "Individual", "Confirmada", "Atendimento consultório 2."),
         (1, 1, amanha, "09:00", 50, "Presencial", "Individual", "Agendada", "Sessão extra solicitada."),
     ]
-    cursor.executemany(
-        """
-        INSERT INTO sessoes (
-            paciente_id, psicologo_id, data_sessao, hora_inicio, duracao_minutos,
-            modalidade, tipo_sessao, status, observacoes_agenda
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        sessoes,
-    )
+    for s in sessoes:
+        cursor.execute(
+            """
+            INSERT INTO sessoes (
+                paciente_id, psicologo_id, data_sessao, hora_inicio, duracao_minutos,
+                modalidade, tipo_sessao, status, observacoes_agenda
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            s,
+        )
 
-    # Evolução clínica inicial
     cursor.execute(
         """
         INSERT INTO prontuario_evolucoes (
@@ -352,7 +468,6 @@ def seed_initial_data(conn: sqlite3.Connection):
         ),
     )
 
-    # Lançamentos financeiros iniciais
     lancamentos = [
         ("Receita", "Sessão", "Sessão Individual - Mariana Costa Silva", 1, 1, 1, 180.0, semana_passada, semana_passada, "Pago", "PIX", "Comprovante enviado via WhatsApp"),
         ("Receita", "Sessão", "Sessão Individual - Mariana Costa Silva", 1, 1, 2, 180.0, hoje, None, "Pendente", "PIX", "Cobrança referente à sessão de hoje"),
@@ -360,14 +475,15 @@ def seed_initial_data(conn: sqlite3.Connection):
         ("Receita", "Sessão", "Sessão Individual - Beatriz Ferreira Lima", 3, 2, 4, 200.0, hoje, None, "Pendente", "Cartão de Crédito", ""),
         ("Despesa", "Aluguel / Condomínio", "Locação das Salas e Condomínio Comercial", None, None, None, 1450.0, ontem, ontem, "Pago", "Transferência", "Despesa fixa mensal"),
     ]
-    cursor.executemany(
-        """
-        INSERT INTO financeiro (
-            tipo, categoria, descricao, paciente_id, psicologo_id, sessao_id,
-            valor, data_vencimento, data_pagamento, status_pagamento, forma_pagamento, observacoes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        lancamentos,
-    )
+    for l in lancamentos:
+        cursor.execute(
+            """
+            INSERT INTO financeiro (
+                tipo, categoria, descricao, paciente_id, psicologo_id, sessao_id,
+                valor, data_vencimento, data_pagamento, status_pagamento, forma_pagamento, observacoes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            l,
+        )
 
     conn.commit()
