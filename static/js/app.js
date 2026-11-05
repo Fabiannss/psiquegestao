@@ -32,6 +32,7 @@ const App = {
         this.currentUser = null;
         sessionStorage.removeItem("psique_user");
         document.getElementById("app-main-layout").style.display = "none";
+        document.getElementById("app-main-layout").classList.remove("layout-visible");
         document.getElementById("login-screen").style.display = "flex";
         document.getElementById("login-erro").style.display = "none";
         this.renderQuickLoginAccounts();
@@ -88,7 +89,8 @@ const App = {
         this.currentUser = user;
         sessionStorage.setItem("psique_user", JSON.stringify(user));
         document.getElementById("login-screen").style.display = "none";
-        document.getElementById("app-main-layout").style.display = "grid";
+        document.getElementById("app-main-layout").style.display = "";
+        document.getElementById("app-main-layout").classList.add("layout-visible");
 
         this.renderUserSelect();
         this.applyRolePermissions();
